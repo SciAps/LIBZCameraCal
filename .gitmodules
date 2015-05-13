@@ -1,0 +1,12 @@
+[submodule "libraries/LIBZHardwareCommon"]
+	path = libraries/LIBZHardwareCommon
+	url = git@github.com:SciAps/LIBZHardwareCommon.git
+[submodule "libraries/Common"]
+	path = libraries/Common
+	url = git@github.com:SciAps/Common.git
+[submodule "libraries/AndroidCommon"]
+	path = libraries/AndroidCommon
+	url = git@github.com:SciAps/AndroidCommon.git
+[submodule "libraries/AndroidEssentials"]
+	path = libraries/AndroidEssentials
+	url = git@github.com:SciAps/AndroidEssentials.git

@@ -1,0 +1,5 @@
+include ':libraries/Common'
+include ':libraries/LIBZHardwareCommon'
+include ':libraries/AndroidCommon'
+include ':libraries/AndroidEssentials'
+include ':CameraCal'

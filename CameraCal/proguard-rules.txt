@@ -1,0 +1,7 @@
+-dontobfuscate
+-dontwarn org.apache.**
+-dontwarn au.com.bytecode.**
+-dontwarn com.google.common.**
+-dontwarn org.codehaus.jackson.map.**
+
+-keep class com.sciaps.** { *; }
