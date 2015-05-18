@@ -1,7 +1,9 @@
 package com.sciaps.android.camera;
 
 
+import android.app.AlertDialog;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -9,11 +11,15 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 
 import com.devsmart.android.BackgroundTask;
 import com.google.inject.Inject;
@@ -53,6 +59,25 @@ public class CameraCalActivity extends InjectLifecycleActivity {
 
         mBmpPaint.setFilterBitmap(true);
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = new MenuInflater(this);
+        inflater.inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.action_takepix:
+                takePicture();
+            return true;
+
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     private View.OnClickListener mOnDoneClicked = new View.OnClickListener() {
@@ -96,34 +121,144 @@ public class CameraCalActivity extends InjectLifecycleActivity {
             Matrix stageToPreview = new Matrix();
             stageToPreview.setPolyToPoly(srcPoints, 0, destPoints, 0, 4);
 
-            m.setRectToRect(mPreviewSize, mPhotoSize, Matrix.ScaleToFit.CENTER);
-            Matrix stageToPhoto = new Matrix(stageToPreview);
+            final Matrix stageToPhoto = new Matrix(stageToPreview);
+            createTransformMatrix(m, mPreviewSize, mPhotoSize);
             stageToPhoto.postConcat(m);
 
-        }
-    };
+            Matrix photoToStage = new Matrix(mPhotoToPreview);
+            m.setPolyToPoly(destPoints, 0, srcPoints, 0, 4);
+            photoToStage.postConcat(m);
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        final Handler handler = new Handler(getMainLooper());
-        if(mPhoto == null) {
             BackgroundTask.runBackgroundTask(new BackgroundTask() {
 
-                TakePix mTakePix;
+                public Bitmap mBitmap;
+
+                Quadrilateral quadA = new Quadrilateral();
+                Quadrilateral quadB = new Quadrilateral();
 
                 @Override
                 public void onBackground() {
-                    mTakePix = mInjector.getInstance(TakePix.class);
+
+                    mBitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.RGB_565);
+                    Canvas c = new Canvas(mBitmap);
+
+
+                    quadA.setRect(new RectF(mXyzStageParams.endLocation[0], mXyzStageParams.startLocation[1], mXyzStageParams.startLocation[0], mXyzStageParams.endLocation[1]));
+                    stageToPhoto.mapPoints(quadA.mPoints);
+
+                    quadB.setRect(new RectF(0, 0, 256, 256));
+                    Matrix photoToMiniPreview = new Matrix();
+                    createTransformMatrix(photoToMiniPreview, quadA, quadB);
+
+                    c.drawBitmap(mPhoto, photoToMiniPreview, mBmpPaint);
+
                 }
 
                 @Override
                 public void onAfter() {
-                    mTakePix.setCallback(mOnPhoto);
-                    mTakePix.takePicture();
+                    AlertDialog.Builder builder = new AlertDialog.Builder(CameraCalActivity.this);
+                    ImageView imageView = new ImageView(CameraCalActivity.this);
+                    imageView.setImageBitmap(mBitmap);
+                    builder.setView(imageView);
+                    builder.setPositiveButton("OK", null);
+                    builder.show();
+
                 }
             });
+
         }
+    };
+
+
+    private static class Quadrilateral {
+
+        public static final int TOP_LEFTX = 0;
+        public static final int TOP_LEFTY = 1;
+        public static final int TOP_RIGHTX = 2;
+        public static final int TOP_RIGHTY = 3;
+        public static final int BOTTOM_RIGHTX = 4;
+        public static final int BOTTOM_RIGHTY = 5;
+        public static final int BOTTOM_LEFTX = 6;
+        public static final int BOTTOM_LEFTY = 7;
+
+        public final float[] mPoints = new float[8];
+
+        public Quadrilateral() {
+
+        }
+
+        public void setRect(RectF rect) {
+            mPoints[TOP_LEFTX] = rect.left;
+            mPoints[TOP_LEFTY] = rect.top;
+            mPoints[TOP_RIGHTX] = rect.right;
+            mPoints[TOP_RIGHTY] = rect.top;
+            mPoints[BOTTOM_RIGHTX] = rect.right;
+            mPoints[BOTTOM_RIGHTY] = rect.bottom;
+            mPoints[BOTTOM_LEFTX] = rect.left;
+            mPoints[BOTTOM_LEFTY] = rect.bottom;
+        }
+    }
+
+    private void createTransformMatrix(Matrix matrix, Quadrilateral src, Quadrilateral dst) {
+        matrix.setPolyToPoly(src.mPoints, 0, dst.mPoints, 0, 4);
+    }
+
+    private void createTransformMatrix(Matrix matrix, RectF src, RectF dst) {
+        float[] srcPoints = new float[8];
+        float[] destPoints = new float[8];
+
+
+        //top left
+        srcPoints[0] = src.left;
+        srcPoints[1] = src.top;
+        destPoints[0] = dst.left;
+        destPoints[1] = dst.top;
+
+        //top right
+        srcPoints[2] = src.right;
+        srcPoints[3] = src.top;
+        destPoints[2] = dst.right;
+        destPoints[3] = dst.top;
+
+        //bottom right
+        srcPoints[4] = src.right;
+        srcPoints[5] = src.bottom;
+        destPoints[4] = dst.right;
+        destPoints[5] = dst.bottom;
+
+        //bottom left
+        srcPoints[6] = src.left;
+        srcPoints[7] = src.bottom;
+        destPoints[6] = dst.left;
+        destPoints[7] = dst.bottom;
+
+        matrix.setPolyToPoly(srcPoints, 0, destPoints, 0, 4);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if(mPhoto == null) {
+            //takePicture();
+        }
+    }
+
+    private void takePicture() {
+        BackgroundTask.runBackgroundTask(new BackgroundTask() {
+
+            TakePix mTakePix;
+
+            @Override
+            public void onBackground() {
+                mTakePix = mInjector.getInstance(TakePix.class);
+            }
+
+            @Override
+            public void onAfter() {
+                mTakePix.setCallback(mOnPhoto);
+                mTakePix.takePicture();
+            }
+        });
     }
 
     private TakePix.Callback mOnPhoto = new TakePix.Callback() {
