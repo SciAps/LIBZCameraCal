@@ -51,13 +51,18 @@ android {
         exclude 'META-INF/ASL2.0'
 
     }
+
+    lintOptions {
+        //abortOnError false
+        disable 'InvalidPackage'
+    }
 }
 
 dependencies {
-    compile project(':libraries/Common')
-    compile project(':libraries/LIBZHardwareCommon')
-    compile project(':libraries/AndroidCommon')
-    compile project(':libraries/AndroidEssentials')
+    compile project(':libraries:Common')
+    compile project(':libraries:LIBZHardwareCommon')
+    compile project(':libraries:AndroidCommon')
+    compile project(':libraries:AndroidEssentials')
     provided 'com.sciaps:libz.libzhardware:3.0'
     compile 'com.dev-smart:devsmart-android:0.1.5'
     compile 'org.slf4j:slf4j-android:1.7.7'
